@@ -20,6 +20,7 @@ services:
       - GENESIS_URL=${GENESIS_URL}
       - LOG_LEVEL=${LOG_LEVEL}
       - EXTRAS=${EXTRAS:-}
+      - GOMEMLIMIT=${GOMEMLIMIT:-50GiB}
     entrypoint:
       - docker-entrypoint.sh
       - sonicd
