@@ -1,0 +1,73 @@
+services:
+  sonic:
+    restart: "unless-stopped"
+    build:
+      context: ./sonic
+      dockerfile: Dockerfile.source
+      args:
+        - BUILD_TARGET=${SRC_BUILD_TARGET}
+    stop_grace_period: 3m
+    image: sonic:local
+    pull_policy: never
+    user: sonic
+    volumes:
+      - sonic-data:/var/lib/sonic
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - ${P2P_PORT}:${P2P_PORT}/tcp
+      - ${P2P_PORT}:${P2P_PORT}/udp
+    environment:
+      - GENESIS_URL=${GENESIS_URL}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - EXTRAS=${EXTRAS:-}
+    entrypoint:
+      - docker-entrypoint.sh
+      - sonicd
+      - --http
+      - --http.addr
+      - 0.0.0.0
+      - --http.vhosts=*
+      - --datadir
+      - /var/lib/sonic
+      - --port
+      - ${P2P_PORT}
+      - --http.port
+      - ${RPC_PORT}
+      - --ws
+      - --ws.addr
+      - 0.0.0.0
+      - --ws.port
+      - ${WS_PORT}
+      - --metrics
+      - --metrics.expensive
+      - --metrics.addr
+      - 0.0.0.0
+      - --cache
+      - "12000"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.sonic.service=sonic
+      - traefik.http.routers.sonic.entrypoints=websecure
+      - traefik.http.routers.sonic.rule=Host(`${RPC_HOST}.${DOMAIN}`)
+      - traefik.http.routers.sonic.tls.certresolver=letsencrypt
+      - traefik.http.routers.soniclb.service=sonic
+      - traefik.http.routers.soniclb.entrypoints=websecure
+      - traefik.http.routers.soniclb.rule=Host(`${RPC_LB}.${DOMAIN}`)
+      - traefik.http.routers.soniclb.tls.certresolver=letsencrypt
+      - traefik.http.services.sonic.loadbalancer.server.port=${RPC_PORT}
+      - traefik.http.routers.sonicws.service=sonicws
+      - traefik.http.routers.sonicws.entrypoints=websecure
+      - traefik.http.routers.sonicws.rule=Host(`${WS_HOST}.${DOMAIN}`)
+      - traefik.http.routers.sonicws.tls.certresolver=letsencrypt
+      - traefik.http.routers.sonicwslb.service=sonicws
+      - traefik.http.routers.sonicwslb.entrypoints=websecure
+      - traefik.http.routers.sonicwslb.rule=Host(`${WS_LB}.${DOMAIN}`)
+      - traefik.http.routers.sonicwslb.tls.certresolver=letsencrypt
+      - traefik.http.services.sonicws.loadbalancer.server.port=${WS_PORT}
+      - metrics.scrape=true
+      - metrics.path=/debug/metrics/prometheus
+      - metrics.port=6060
+      - metrics.network=sonic
+
+volumes:
+  sonic-data:

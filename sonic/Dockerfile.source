@@ -1,0 +1,41 @@
+# Build Sonic in a stock Go build container
+FROM golang:1.23-bookworm AS builder
+
+ARG BUILD_TARGET
+
+RUN apt-get update && apt-get install -y bash
+
+WORKDIR /src
+RUN bash -c "git clone https://github.com/Fantom-foundation/Sonic.git sonic && cd sonic \
+  && git config advice.detachedHead false && git fetch --all --tags \
+  && if [[ ${BUILD_TARGET} =~ pr-.+ ]]; then \
+    git fetch origin pull/$(echo ${BUILD_TARGET} | cut -d '-' -f 2)/head:geth-pr; \
+    git checkout geth-pr; \
+  else \
+    git checkout ${BUILD_TARGET}; \
+  fi \
+  && make all"
+
+# Pull all binaries into a second stage deploy container
+FROM debian:bookworm-slim
+
+ARG USER=sonic
+ARG UID=10001
+
+RUN apt-get update && apt-get install -y ca-certificates bash tzdata curl
+
+# See https://stackoverflow.com/a/55757473/12429735RUN
+RUN adduser \
+    --disabled-password \
+    --gecos "" \
+    --shell "/sbin/nologin" \
+    --uid "${UID}" \
+    "${USER}"
+
+RUN mkdir -p /var/lib/sonic && chown ${USER}:${USER} /var/lib/sonic
+
+# Copy executable
+COPY --from=builder /src/sonic/build/sonic* /usr/local/bin/
+COPY ./docker-entrypoint.sh /usr/local/bin/
+
+ENTRYPOINT ["sonicd"]
