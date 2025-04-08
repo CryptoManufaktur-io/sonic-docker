@@ -23,4 +23,4 @@ To update the software, run `./sonicd update` and then `./sonicd up`
 
 # Version
 
-This is Sonic Docker v1.0.0
+This is Sonic Docker v1.0.1
