@@ -8,6 +8,10 @@ services:
         - BUILD_TARGET=${SRC_BUILD_TARGET}
     stop_grace_period: 3m
     image: sonic:local
+    ulimits:
+      nofile:
+        soft: 950000
+        hard: 950000
     pull_policy: never
     user: sonic
     volumes:
