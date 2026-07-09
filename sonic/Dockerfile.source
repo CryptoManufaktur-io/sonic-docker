@@ -1,5 +1,7 @@
 # Build Sonic in a stock Go build container
-FROM golang:1.24-bookworm AS builder
+# Sonic v2.2.0+ requires Go >= 1.26 (go.mod toolchain); GOTOOLCHAIN=local blocks
+# auto-upgrade, so the builder image must ship a Go >= 1.26.
+FROM golang:1.26-bookworm AS builder
 
 ARG BUILD_TARGET
 
